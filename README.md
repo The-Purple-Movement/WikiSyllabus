@@ -48,7 +48,7 @@ universities/university/branch/year/semester/xx.md
 
 
 
-universities/ktu/computer-science/2019/s8/01.md
+universities/ktu/computer-science/2019/s08/01.md
 
 ````
 
@@ -66,7 +66,7 @@ branch: "computer-science"
 version: "2019"
 semester: 8
 course_code: "cst402"
-course_title: "distributed computing"
+course_title: "distributed-computing"
 language: "english"
 contributor: "@your-github-username"
 ---

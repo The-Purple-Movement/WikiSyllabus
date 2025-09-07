@@ -33,7 +33,7 @@ universities/university/branch/year/semester/xx.md
 
 ```
 
-universities/ktu/computer-science/2019/s8/01.md
+universities/ktu/computer-science/2019/s08/01.md
 
 ````
 
@@ -81,7 +81,7 @@ universities/common-paper/<year>/<semester>/<xx>.md
 Example:
 
 ```
-universities/common-paper/2019/s1/01.md
+universities/common-paper/2019/s01/01.md
 ```
 
 * **YAML Frontmatter:**
@@ -182,6 +182,13 @@ When creating your Pull Request, **please include a short description** that exp
 - ✅ Add your GitHub username as `contributor`.
 - ✅ Ensure **all folders and files are lowercase**.
 - ✅ Confirm naming and structure matches the guidelines.
+
+---
+## 📝 Markdown File Format
+
+Each `.md` file must start with YAML frontmatter.  
+
+👉 Please refer to the [Syllabus File Template](https://github.com/9sreerag7/WikiSyllabus/blob/main/demo.md) for the complete format with examples.
 
 ---
 
