@@ -1,0 +1,46 @@
+---
+country: "india"
+university: "ktu"
+branch: "computer-science-and-design"
+version: "2019"
+semester: "6"
+course_code: "cst306"
+course_title: "algorithm-analysis-and-design"
+language: "english"
+contributor: "sandra-alex"
+---
+
+# CST306: Algorithm Analysis and Design
+
+## Course Objectives
+* To develop ability to analyze, design, and evaluate algorithms.
+* To introduce techniques for solving complex computational problems.
+
+## Course Outcomes
+* **CO1:** Analyze time/space complexities, performance.
+* **CO2:** Design algorithms using divide and conquer, greedy, dynamic programming.
+* **CO3:** Apply graph algorithms, shortest paths, network flows.
+* **CO4:** Evaluate limits, NP-completeness, and approximation algorithms.
+* **CO5:** Implement advanced algorithmic strategies for real applications.
+
+## Course Content
+
+### Module 1: Basic Analysis
+* Asymptotic notation, performance measurement, recurrence relations.
+
+### Module 2: Divide and Conquer
+* Merge sort, quick sort, binary search, closest pair.
+
+### Module 3: Greedy and Dynamic Programming
+* Huffman coding, activity selection, knapsack, matrix chain multiplication, optimal binary search tree.
+
+### Module 4: Graph Algorithms
+* BFS, DFS, minimum spanning tree, Dijkstra, Ford-Fulkerson.
+
+### Module 5: Complexity, NP & Approximation
+* NP-completeness, approximation algorithms, real-world applications.
+
+## References
+1. Thomas H. Cormen, Introduction to Algorithms.
+2. E. Horowitz & S. Sahni, Fundamentals of Computer Algorithms.
+
