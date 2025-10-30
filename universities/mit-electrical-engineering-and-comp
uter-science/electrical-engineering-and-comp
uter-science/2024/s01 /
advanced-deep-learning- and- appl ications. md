@@ -1,0 +1,99 @@
+---
+country: "usa"
+university: "mit"
+branch: "electrical-engineering-and-computer-science"
+version: "2024"
+semester: 1
+course_code: "6-S191"
+course_title: "advanced-deep-learning-and-applications"
+language: "english"
+contributor: "@YOUR-GITHUB-USERNAME" # ***CRITICAL: Replace this with your actual GitHub username***
+---
+
+# 6.S191 Advanced Deep Learning and Applications (Spring 2024)
+
+## 📌 Course Description
+
+This course provides a rigorous, hands-on introduction to the field of Deep Learning. We move beyond foundational concepts to explore **advanced architectures**, computational efficiency, and real-world applications across computer vision, natural language processing, and generative modeling. The course emphasizes practical implementation using Python and modern deep learning frameworks (primarily PyTorch). Students will complete several challenging coding assignments and a final project that involves designing, training, and deploying a novel deep learning system.
+
+## 🎯 Learning Objectives
+
+Upon successful completion of this subject, students will be able to:
+
+1.  **Formulate** complex learning problems into appropriate deep learning model architectures.
+2.  **Implement** and train advanced architectures including Vision Transformers and advanced GAN variants.
+3.  **Debug** and analyze the performance of large-scale models, understanding issues like catastrophic forgetting and gradient explosion/vanishing.
+4.  **Evaluate** model generalization and robustness using modern metrics and testing methodologies.
+5.  **Critique** current research papers in the field of deep learning and propose extensions.
+
+## 📚 Required Textbooks and Resources
+
+* **Primary Text (DLB):** Goodfellow, I., Bengio, Y., & Courville, A. (2016). *Deep Learning*. MIT Press. (Free online version available).
+* **Supplementary Text (Geron):** Geron, A. (2020). *Hands-On Machine Learning with Scikit-Learn, Keras & TensorFlow* (3rd Edition). O’Reilly Media.
+* **Platform:** All coding assignments will utilize **Google Colab Pro** or equivalent cloud GPU resources.
+* **Discussion:** **Piazza** will be used for all course-related questions and announcements.
+
+## 📅 Course Schedule and Units
+
+### Unit 1: Foundations and Convolutional Networks (Weeks 1-3)
+
+| Week | Topics | Readings / Focus |
+| :--- | :--- | :--- |
+| **1** | **Introduction & Backpropagation Review** | Setup, Tensors, Computational Graphs. Review of standard network components. (DLB Ch. 6, 8) |
+| **2** | **Advanced CNN Design** | Residual Connections (ResNets), Dense Connections (DenseNets), Inception modules. |
+| **3** | **Modern Computer Vision** | Semantic Segmentation (FCNs, U-Net), Object Detection (R-CNN, YOLO, SSD). |
+
+### Unit 2: Sequence Models and Attention (Weeks 4-6)
+
+| Week | Topics | Readings / Focus |
+| :--- | :--- | :--- |
+| **4** | **RNNs and LSTMs in Depth** | Vanishing gradients in detail. Gate mechanics (LSTM/GRU), Teacher Forcing. |
+| **5** | **The Attention Mechanism** | Soft and Hard Attention. Encoder-Decoder architectures. Neural Machine Translation (NMT). |
+| **6** | **The Transformer Architecture** | "Attention Is All You Need." Multi-Head Attention, Positional Encodings. |
+
+### Unit 3: Generative Models (Weeks 7-9)
+
+| Week | Topics | Readings / Focus |
+| :--- | :--- | :--- |
+| **7** | **Variational Autoencoders (VAEs)** | Reparameterization Trick, ELBO optimization, Conditional VAEs. |
+| **8** | **Generative Adversarial Networks (GANs)** | Minimax game theory, DCGAN, Wasserstein GAN (WGAN). |
+| **9** | **Diffusion Models** | Forward and Reverse Diffusion Process, Denoising Autoencoders, Applications (Image Generation). |
+
+### Unit 4: Practical Deep Learning (Weeks 10-12)
+
+| Week | Topics | Readings / Focus |
+| :--- | :--- | :--- |
+| **10** | **Optimization and Regularization** | AdamW, Learning Rate Schedules (Warmup, Cosine), Weight Decay, Batch Normalization. |
+| **11** | **Model Deployment and Efficiency** | Quantization, Pruning, Knowledge Distillation. ONNX format and deployment pipelines. |
+| **12** | **Robustness and Ethics** | Adversarial Examples (FGSM, PGD), Explainable AI (XAI: LIME, SHAP), Fairness in ML. |
+
+## ⚖️ Grading and Evaluation
+
+The final grade will be calculated based on the following components:
+
+| Component | Weight | Details |
+| :--- | :--- | :--- |
+| **Programming Assignments (4)** | **40%** | Four challenging projects: CNN, RNN/Transformer, GAN/VAE, and Efficiency. |
+| **Midterm Exam** | **20%** | Open-book, covering Units 1 and 2. Focus on theoretical understanding and derivation. |
+| **Final Project** | **30%** | Team-based research project (2-3 students). Must involve novel application or extension of a model. Includes proposal, progress report, and final presentation/report. |
+| **Participation & Quizzes** | **10%** | Based on in-class discussion, lecture attendance, and weekly reading quizzes on Piazza. |
+
+## 💻 Programming Assignments
+
+* **P1: Image Classification (CNNs):** Implementing a modern CNN (e.g., ResNet) from scratch on CIFAR-10.
+* **P2: Text Generation (Transformers):** Implementing a small decoder-only transformer for simple text generation.
+* **P3: Generative Modeling (GANs):** Training a conditional GAN to generate novel images.
+* **P4: Model Efficiency:** Pruning a pre-trained model to achieve a 2x reduction in parameter count with minimal accuracy loss.
+
+## 📜 Policies
+
+### Late Policy
+Assignments are due at 11:59 PM EST on the specified date. Each student is allocated **three "slip days"** for the semester, usable in 24-hour increments. Once slip days are exhausted, late assignments will incur a penalty of **20% per day**. No assignment will be accepted more than 72 hours (3 days) after the original deadline.
+
+### Collaboration Policy (The "Whiteboard Rule")
+* You may discuss high-level concepts, algorithms, and general debugging strategies with classmates. This is encouraged.
+* Any discussion that leads to a solution must be held at a high enough level that no one writes down or shares code. **You must not share code, pseudocode, or equations via any digital or written medium.**
+* All code submitted must be written by you and you alone. If you receive help that is *not* a trivial debugging fix, you must **cite your collaborator** in a comment at the top of the relevant file. Failure to cite collaborators constitutes a violation of the Institute's academic integrity policy.
+
+### Special Accommodations
+Students with disabilities or special circumstances requiring accommodations should contact the Student Disability Services office and the instructor as early as possible in the semester.
