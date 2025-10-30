@@ -44,7 +44,7 @@ jobs:
           git config --global user.name "alvin-dennis"
           git config --global user.email "alvindennis80@gmail.com"
 
-      - name: Commit updated syllabus.json
+      - name: Push Changes
         run: |
             git add apps/server/src/routes/syllabus/syllabus.json
             git commit -m "chore: Updated syllabus.json from WikiSyllabus" || echo "No changes to commit"
