@@ -41,8 +41,8 @@ jobs:
 
       - name: Set up Git config
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "alvin-dennis"
+          git config --global user.email "alvindennis80@gmail.com"
 
       - name: Commit updated syllabus.json
         run: |
