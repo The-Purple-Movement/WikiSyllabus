@@ -46,6 +46,6 @@ jobs:
 
       - name: Push Changes
         run: |
-            git add apps/server/src/routes/syllabus/syllabus.json
-            git commit -m "chore: Updated syllabus.json from WikiSyllabus" || echo "No changes to commit"
-            git push origin main
+          git add apps/server/src/routes/syllabus/syllabus.json
+          git commit -m "chore: Updated syllabus.json from WikiSyllabus" || echo "No changes to commit"
+          git push origin main
