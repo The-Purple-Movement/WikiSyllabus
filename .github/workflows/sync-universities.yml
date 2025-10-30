@@ -37,7 +37,7 @@ jobs:
         run: npm install
 
       - name: Run update script
-        run: npm run update
+        run: npm run patch
 
       - name: Set up Git config
         run: |
