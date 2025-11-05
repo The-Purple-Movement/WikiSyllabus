@@ -1,0 +1,44 @@
+---
+country: "brazil"
+university: "ufmg"
+branch: "computer-science"
+version: "2025"
+semester: 1
+course_code: "cs101"
+course_title: "programacao-estruturada"
+language: "portuguese"
+contributor: "@Debora0Martins"
+---
+
+# Programação Estruturada
+
+## 🎯 Objetivos da Disciplina
+Introduzir os conceitos fundamentais da programação estruturada, utilizando a linguagem C como base para o raciocínio lógico e a resolução de problemas computacionais.
+
+## 🧩 Conteúdo Programático
+- Introdução à lógica de programação  
+- Estruturas condicionais e de repetição  
+- Vetores e matrizes  
+- Funções e modularização  
+- Introdução à manipulação de arquivos  
+- Boas práticas de programação
+
+## 📚 Bibliografia Básica
+1. Kernighan, B. & Ritchie, D. *The C Programming Language*. Prentice Hall.  
+2. Forbellone, A. L. & Eberspächer, H. *Lógica de Programação*. Pearson.
+
+## 📖 Bibliografia Complementar
+- Ziviani, N. *Algoritmos: Teoria e Prática*. LTC.  
+- Sebesta, R. *Conceitos de Linguagens de Programação*. Bookman.
+
+## 🧠 Metodologia
+Aulas expositivas, exercícios práticos e desenvolvimento de pequenos projetos em C.
+
+## 🧾 Avaliação
+- Provas escritas (40%)  
+- Trabalhos práticos (40%)  
+- Participação e exercícios (20%)
+
+## 👩‍💻 Observações
+Material produzido e compartilhado sob licença aberta.  
+Contribuição feita por [Débora Martins](https://github.com/Debora0Martins) para o WikiSyllabus e o Hacktoberfest 2025. 🎓✨
