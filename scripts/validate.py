@@ -29,6 +29,14 @@ PATH_RE = re.compile(
     r"^universities/([a-z0-9-]+)/([a-z0-9-]+)/(\d{4})/(s\d{2})/([a-z0-9_-]+)\.md$"
 )
 
+# Previous-year question papers:
+# universities/<university>/<branch>/<year>/<semester>/pyq/<subjectid>-<examyear>[-<session>].md
+PYQ_PATH_RE = re.compile(
+    r"^universities/([a-z0-9-]+)/([a-z0-9-]+)/(\d{4})/(s\d{2})/pyq/([a-z0-9_]+)-(\d{4})(?:-([a-z]+))?\.md$"
+)
+
+PYQ_REQUIRED_FIELDS = ["course_code", "exam_year", "contributor"]
+
 # Accepted short codes: frontmatter may use the alias while the folder uses
 # the canonical slug. Extend this map when a new university has an
 # established short name.
@@ -64,9 +72,53 @@ def parse_frontmatter(text):
     return data, None
 
 
+def validate_pyq(path, rel, match):
+    """Validate a previous-year-question paper file."""
+    errors, warnings = [], []
+    exam_year = match.group(6)
+    try:
+        text = open(path, encoding="utf-8").read()
+    except Exception as exc:
+        return [f"unreadable: {exc}"], warnings
+
+    fm, err = parse_frontmatter(text)
+    if err:
+        errors.append(err)
+        return errors, warnings
+
+    for field in PYQ_REQUIRED_FIELDS:
+        if field not in fm or not fm[field]:
+            errors.append(f"frontmatter missing required field: {field}")
+
+    if fm.get("exam_year") and fm["exam_year"] != exam_year:
+        errors.append(
+            f"frontmatter exam_year '{fm['exam_year']}' does not match filename year '{exam_year}'"
+        )
+
+    if fm.get("contributor") and not fm["contributor"].startswith("@"):
+        warnings.append("contributor should be a GitHub handle starting with @")
+
+    body = text.lstrip()
+    body = body[body.find("\n---") + 4:] if body.startswith("---") else body
+    if len(body.strip()) < 80:
+        warnings.append("paper body looks near-empty; add the actual questions")
+
+    return errors, warnings
+
+
 def validate_file(path):
     errors, warnings = [], []
     rel = os.path.relpath(path).replace(os.sep, "/")
+
+    pyq = PYQ_PATH_RE.match(rel)
+    if pyq:
+        return validate_pyq(path, rel, pyq)
+
+    if "/pyq/" in rel:
+        errors.append(
+            "pyq path must match universities/<u>/<b>/<year>/<sNN>/pyq/<subjectid>-<examyear>[-<session>].md"
+        )
+        return errors, warnings
 
     m = PATH_RE.match(rel)
     if not m:
