@@ -17,6 +17,21 @@ To provide the **core database of every university syllabus** — organized, mar
 
 ---
 
+## 🟣 Part of the Purple Movement
+
+WikiSyllabus is the **data layer** of [The Purple Movement](https://purple-movement.com/)'s open learning ecosystem — every syllabus added here directly powers the tools downstream:
+
+| Project | Layer | Role |
+|---|---|---|
+| **WikiSyllabus** (this repo) | Data | The open Wikipedia of university syllabi |
+| [Beyond Syllabus](https://github.com/The-Purple-Movement/Beyond-Syllabus) | Understanding | AI companion that turns these syllabi into interactive learning — [beyondsyllabus.in](https://beyondsyllabus.in/) |
+| [Beyond Borders](https://github.com/The-Purple-Movement/Beyond-Borders) | Launchpad | What to build, plus the global network and support system behind the builders |
+| [Beyond Gatekeepers](https://github.com/deepusnath/Beyond-Gatekeepers) | Community | The Evolve meetup network — successor to 12 years of FAYA:80 |
+
+**One syllabus file contributed here becomes an AI-powered study companion for every student in that course.** That's the leverage of this repository — and why keeping it current, across all universities and revision years, is the movement's most scalable contribution.
+
+---
+
 ## 💬 What We Advocate
 
 - 📖 **Open-book examinations**
