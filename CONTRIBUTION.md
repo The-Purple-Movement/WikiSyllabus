@@ -10,12 +10,36 @@ Together, we can make a fully open, searchable, and markdown-based syllabus inde
 
 - ✅ **New Syllabus Files**  
   - Add missing course markdowns (`.md`) for different branches, semesters, or years.
+- 📄 **Previous Year Question Papers (PYQs)**  
+  - Add publicly circulated exam papers next to their subject — see the section below.
 - 🛠️ **Fix Errors**  
   - Typos, outdated content, or formatting issues.
 - 📘 **Add References**  
   - Useful books, links, or official sources for specific courses.
 - 💡 **Improve Structure**  
   - Suggestions for folder naming, file structure, or tagging.
+
+---
+
+## 📄 Previous Year Question Papers (PYQs)
+
+Every PYQ you contribute becomes practice material inside [Beyond Syllabus](https://github.com/The-Purple-Movement/Beyond-Syllabus) for every student of that course.
+
+**Location and naming (both matter):**
+
+```
+universities/<university>/<branch>/<scheme-year>/<sNN>/pyq/<subjectid>-<examyear>[-<session>].md
+```
+
+`<subjectid>` is the basename of the subject's syllabus file in the same semester folder: questions for `01.md` go in `pyq/01-2023-may.md`.
+
+**Rules:**
+
+1. Start from [`pyq-template.md`](./pyq-template.md) — frontmatter requires `course_code`, `exam_year`, and `contributor`
+2. One file per paper: May and December sessions are separate files
+3. Transcribe faithfully: keep marks, parts, and question numbers
+4. Only papers **publicly circulated by the university** — no leaked or purchased material, ever
+5. The validator checks PYQ files automatically on your PR
 
 ---
 
