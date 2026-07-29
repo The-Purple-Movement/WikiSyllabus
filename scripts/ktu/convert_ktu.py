@@ -158,12 +158,71 @@ def numbered_rows(chunk: str):
     return merged
 
 
-# A module marker line: the row number, optionally the middle line of that
-# row's text, then the contact-hours figure pushed to the far right column.
-MODULE_MARK = re.compile(r"^\s{0,20}(\d)\s+(?:(\S.*?)\s{3,})?(\d{1,3})\s*$")
+# A line carrying a module number in the left column: the digit, then either
+# nothing or a wide gap and that row's text. The contact-hours figure is a
+# separate column and does not reliably share the number's line, so it is
+# stripped before matching rather than matched alongside.
+NUM_LINE = re.compile(r"^(\s{0,24})([1-9])(?:\s{2,}(\S.*?))?\s*$")
+HOURS = re.compile(r"\s{3,}(\d{1,3})\s*$")
+# Left edge of the contact-hours column. Nothing this far right is prose.
+HOURS_COL = 55
 
 
-def module_rows(chunk: str):
+def drop_hours(raw: str) -> str:
+    """Remove the right-aligned contact-hours figure from a table line.
+
+    Tested on where the digits sit, not where the gap before them starts: on
+    a line holding nothing but the hours figure the gap begins at column zero.
+    """
+    m = HOURS.search(raw)
+    return raw[: m.start()] if m and m.start(1) >= HOURS_COL else raw
+
+
+def module_markers(lines):
+    """Locate the line holding each module's number.
+
+    Numbers are not the only digits in the left column, so candidates are
+    resolved as a whole: build the run 1, 2, 3... that stays in one column,
+    and prefer the longest such run. A stray digit inside prose rarely has
+    four consecutively-numbered siblings sitting at the same indent.
+    """
+    cands = []
+    for i, raw in enumerate(lines):
+        m = NUM_LINE.match(drop_hours(raw))
+        if m:
+            cands.append((i, int(m.group(2)), len(m.group(1)), m.group(3) or ""))
+
+    best, best_score = [], None
+    for start in [c for c in cands if c[1] == 1]:
+        seq = [start]
+        for n in range(2, 9):
+            opts = [c for c in cands if c[1] == n and c[0] > seq[-1][0]]
+            if not opts:
+                break
+            # Same left column as the run so far beats merely being next.
+            opts.sort(key=lambda c: (abs(c[2] - start[2]) > 3, c[0]))
+            seq.append(opts[0])
+        spread = max(abs(c[2] - start[2]) for c in seq)
+        score = (len(seq), -spread)
+        if best_score is None or score > best_score:
+            best, best_score = seq, score
+    return {i: (n, text) for i, n, _, text in best}
+
+
+# How hard the centred-marker geometry pushes back against the prose signals.
+# Tuned against hand-verified boundaries in truth.py; see scripts/ktu/README.
+W_ASYM = 0.45
+
+# How close a rival layout may score before the split is called unreliable.
+AMBIGUITY_MARGIN = 0.5
+
+# Weight of the topic-heading signal. KTU modules usually open by naming their
+# subject and following it with a colon ("Turbo codes: Turbo decoding, ...").
+W_TOPIC = 4.0
+TOPIC = re.compile(r"^[A-Z][^.]{0,45}?\s*:")
+
+
+def module_rows(chunk: str, with_confidence=False):
     """Parse a KTU theory syllabus table.
 
     Each module is a table row, and pdftotext centres the row number and its
@@ -171,60 +230,136 @@ def module_rows(chunk: str):
     through the module's own text rather than at its start. Blank lines fall
     both inside and between cells, so they cannot mark the boundary alone.
 
-    What holds: a blank-line paragraph never straddles two modules, and a
-    centred marker is nearest to its own row. So each paragraph is assigned to
-    the marker it contains, or failing that to the closest marker by line.
+    What holds: the marker sits near the middle of its own row, so the split
+    between two consecutive modules lies somewhere between their markers.
+    Which line exactly is decided by prose, not by arithmetic: a real cell
+    boundary has a finished sentence above it and a fresh one below. Blank
+    lines and the midpoint only break ties, because pdftotext emits blanks
+    inside cells as readily as between them.
     """
     lines = chunk.replace("\f", "\n\n").split("\n")
-
-    # Markers must run 1, 2, 3... which rejects stray numeric lines that
-    # happen to start with a digit and end with one.
-    marks, expect = {}, 1
-    for i, raw in enumerate(lines):
-        m = MODULE_MARK.match(raw)
-        if m and int(m.group(1)) == expect:
-            marks[i] = (expect, m.group(2) or "")
-            expect += 1
+    marks = module_markers(lines)
     if not marks:
-        return []
+        return ([], True) if with_confidence else []
 
-    paras, cur = [], None
-    for i, raw in enumerate(lines):
+    def shown(i):
         if i in marks:
-            text = marks[i][1]
-        else:
-            text = re.sub(r"\s{2,}", " ", raw).strip()
-            if text and NOISE.match(text):
-                continue
-        if not text:
-            cur = None
-            continue
-        if cur is None:
-            cur = {"at": [i], "lines": []}
-            paras.append(cur)
-        cur["at"].append(i)
-        # A line wrapped mid-sentence rejoins the one above it.
-        if cur["lines"] and text[:1].islower():
-            cur["lines"][-1] = cur["lines"][-1].rstrip() + " " + text
-        else:
-            cur["lines"].append(text)
+            return marks[i][1]
+        t = re.sub(r"\s{2,}", " ", drop_hours(lines[i])).strip()
+        return "" if NOISE.match(t) else t
+
+    # Right-hand edge of the text column. A line ending well short of it is
+    # the last line of a wrapped block, which is where a cell tends to end.
+    edges = [len(drop_hours(l).rstrip()) for l in lines if l.strip()]
+    width = max(edges) if edges else 0
+
+    # Running count of lines that carry text, so cell sizes can be compared
+    # without blank padding (which varies per cell) distorting them.
+    filled = [0]
+    for i in range(len(lines)):
+        filled.append(filled[-1] + bool(shown(i)))
+
+    def prose(j, a, b):
+        """How much line j looks like the seam between two cells, judged only
+        on the text either side of it."""
+        k_above = next((k for k in range(j - 1, a, -1) if shown(k)), None)
+        above = shown(k_above) if k_above is not None else ""
+        below = next((shown(k) for k in range(j, b + 1) if shown(k)), "")
+        score = 0.0
+        if above and sentence_closed(above):
+            score += 3
+        if below[:1].isupper():
+            score += 2
+        if not lines[j].strip():
+            score += 1
+        if k_above is not None and len(drop_hours(lines[k_above]).rstrip()) < 0.6 * width:
+            score += 2
+        # A bracketed reference such as "[Text 1: sections 3.1-3.4]" is a
+        # footnote to the module above it, so it must not open the next.
+        if below.startswith("["):
+            score -= 4
+        if TOPIC.match(below):
+            score += W_TOPIC
+        return score
+
+    def lopsided(lo, a, hi):
+        """How far marker a sits from the middle of the cell [lo, hi).
+
+        Counted in lines carrying text: blank padding differs from cell to
+        cell and would otherwise swamp the comparison.
+        """
+        return abs((filled[a] - filled[lo]) - (filled[hi] - filled[a + 1]))
+
+    # Every boundary is chosen at once rather than one at a time. Taken
+    # greedily, a locally tempting split leaves the *next* cell badly
+    # off-centre, and by then the choice is already locked in.
+    at = sorted(marks)
+    start = next((i for i in range(len(lines)) if shown(i)), 0)
+    end = len(lines)
+    gaps = list(zip(at, at[1:]))
+
+    def solve(banned=None):
+        """Highest-scoring set of boundaries, optionally with one gap's
+        neighbourhood ruled out so a rival layout can be costed."""
+        layers, prev = [], {start: (0.0, None)}
+        for g, (a, b) in enumerate(gaps):
+            layer = {}
+            for j in range(a + 1, b + 1):
+                if banned and banned[0] == g and abs(j - banned[1]) <= 2:
+                    continue
+                gain = prose(j, a, b)
+                best = max(
+                    ((sc + gain - W_ASYM * lopsided(p, a, j), p)
+                     for p, (sc, _) in prev.items() if p <= a),
+                    default=None,
+                )
+                if best:
+                    layer[j] = best
+            if not layer:
+                return None, []
+            layers.append(layer)
+            prev = layer
+        score, cur = max(
+            (sc - W_ASYM * lopsided(j, at[-1], end), j) for j, (sc, _) in prev.items()
+        )
+        chosen = []
+        for layer in reversed(layers):
+            chosen.append(cur)
+            cur = layer[cur][1]
+        return score, list(reversed(chosen))
+
+    score, chosen = solve()
+    if score is None:
+        return ([], True) if with_confidence else []
+    # If a materially different layout scores about as well, the table does
+    # not say where the cells divide and no amount of tuning will reveal it.
+    # Say so, rather than picking one and sounding certain.
+    ambiguous = any(
+        (rival := solve((g, j))[0]) is not None and rival >= score - AMBIGUITY_MARGIN
+        for g, j in enumerate(chosen)
+    )
+    edges = [0] + chosen + [end]
 
     rows = {}
-    for p in paras:
-        owned = [marks[i][0] for i in p["at"] if i in marks]
-        if owned:
-            n = owned[0]
-        else:
-            mid = (p["at"][0] + p["at"][-1]) / 2
-            n = marks[min(marks, key=lambda i: abs(i - mid))][0]
-        rows.setdefault(n, []).extend(p["lines"])
+    for (n, _), lo, hi in zip((marks[i] for i in at), edges, edges[1:]):
+        out = []
+        for i in range(lo, hi):
+            text = shown(i)
+            if not text:
+                continue
+            # A line wrapped mid-sentence rejoins the one above it.
+            if out and text[:1].islower():
+                out[-1] = out[-1].rstrip() + " " + text
+            else:
+                out.append(text)
+        rows[n] = out
 
     merged = []
     for n in sorted(rows):
         text = re.sub(r"\s{2,}", " ", " ".join(rows[n])).strip()
         if len(text) > 3:
             merged.append((n, text))
-    return merged
+    return (merged, ambiguous) if with_confidence else merged
 
 
 def main():
@@ -257,7 +392,7 @@ def main():
         body = numbered_rows(body_src)
     else:
         body_src = section(block, r"\bSYLLABUS\b", stops)
-        body = module_rows(body_src)
+        body, unsure = module_rows(body_src, with_confidence=True)
 
     # KTU's table layouts vary enough that extraction cannot be trusted
     # unattended. Refuse to emit a file that looks wrong so the caller has to
@@ -268,6 +403,8 @@ def main():
     if not body:
         problems.append("no syllabus body found")
     if ctype == "Theory":
+        if unsure:
+            problems.append("module boundaries are ambiguous; a rival split scores as well")
         if len(body) < 4:
             problems.append(f"only {len(body)} modules (KTU theory courses have 4+)")
         thin = [n for n, txt in body if len(txt) < 120]
