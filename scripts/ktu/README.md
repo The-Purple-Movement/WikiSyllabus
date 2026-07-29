@@ -27,10 +27,14 @@ experiments. A rejected course must be transcribed by hand from the PDF. This
 is deliberate. A silently truncated module is worse than a missing file,
 because nobody goes looking for it.
 
-Measured on the CSE 2024 branch PDF (96 courses): 58% pass the gate, 42% are
-rejected and need hand transcription. Machine time is negligible (about 22 ms
-per course); the real cost of this pipeline is human verification, and the
-gate exists to tell you exactly which courses need it.
+Measured on the CSE 2024 branch PDF (96 courses): 58% pass the gate. Measured
+across all 40 branch PDFs of the 2024 scheme (1,845 unique course codes, after
+deduplicating the 3,003 entries that appear across branches): 44% pass, split
+84% for labs and 39% for theory.
+
+Machine time is negligible: 17 seconds to run the gate over the entire scheme.
+The real cost of this pipeline is human verification, and the gate exists to
+tell you exactly which 1,036 courses need it.
 
 The rejection rate is a property of KTU's table layouts, which vary between
 courses. Three distinct table shapes are handled so far:
