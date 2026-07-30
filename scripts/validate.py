@@ -139,6 +139,52 @@ def validate_overview(path):
     return errors, warnings
 
 
+def shadowed_frontmatter(text):
+    """True when a second, complete frontmatter block follows the first.
+
+    A repair in this repository once prepended a generated block onto files
+    whose own frontmatter was merely missing its opening delimiter. The result
+    parses as valid (the parser stops at the first block) while the real
+    metadata sits below it, unread, and the contributor loses attribution.
+
+    The test is deliberately strict, because `---` is also a Markdown
+    horizontal rule and over a thousand files use one. A block qualifies only
+    if it carries every required field exactly once and nothing else, which
+    ordinary prose and rules do not.
+    """
+    if not text.lstrip().startswith("---"):
+        return False
+    stripped = text.lstrip()
+    first_end = stripped.find("\n---", 3)
+    if first_end == -1:
+        return False
+
+    after = stripped[first_end + 4:]
+    if after[:1] not in ("\n", ""):        # the delimiter must end its own line
+        return False
+    candidate_start = after.lstrip("\n")   # blank lines between blocks are allowed
+    second_end = candidate_start.find("\n---")
+    if second_end == -1:
+        return False
+    block = candidate_start[:second_end]
+
+    # A fence opening before the candidate means we are inside a code example.
+    if (after[: len(after) - len(candidate_start)] + block).count("```") % 2:
+        return False
+    if "```" in block:
+        return False
+
+    seen = []
+    for line in block.split("\n"):
+        if not line.strip():
+            return False                   # frontmatter blocks have no blank lines
+        m = re.match(r"^([a-z_]+):\s*\S", line)
+        if not m:
+            return False                   # prose, indentation or a bare word
+        seen.append(m.group(1))
+    return sorted(seen) == sorted(REQUIRED_FIELDS)
+
+
 def validate_file(path):
     errors, warnings = [], []
     rel = os.path.relpath(path).replace(os.sep, "/")
@@ -179,6 +225,13 @@ def validate_file(path):
     if err:
         errors.append(err)
         return errors, warnings
+
+    if shadowed_frontmatter(text):
+        errors.append(
+            "a second complete frontmatter block follows the first; the block "
+            "below is unread and its contributor loses attribution. Keep one "
+            "block, and check git history before discarding either"
+        )
 
     for field in REQUIRED_FIELDS:
         if field not in fm or not fm[field]:
