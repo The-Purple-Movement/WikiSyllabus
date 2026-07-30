@@ -1,30 +1,20 @@
 name: Validate Syllabus Files
 
+# Validates the whole commons, not just the files a pull request touches.
+# Checking only changed files let 202 pre-existing errors sit unnoticed for
+# months, and meant a contribution could add a broken file and still pass so
+# long as it did not happen to edit an already-broken one.
 on:
   pull_request:
-    paths:
-      - "universities/**"
+  push:
+    branches: [main]
+  workflow_dispatch:
 
 jobs:
   validate:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
 
-      - name: Find changed syllabus files
-        id: changed
-        run: |
-          git fetch origin ${{ github.base_ref }} --depth=1
-          CHANGED=$(git diff --name-only --diff-filter=ACMR origin/${{ github.base_ref }}...HEAD -- 'universities/**/*.md' | tr '\n' ' ')
-          echo "files=$CHANGED" >> "$GITHUB_OUTPUT"
-          echo "Changed files: $CHANGED"
-
-      - name: Validate
-        if: steps.changed.outputs.files != ''
-        run: python3 scripts/validate.py ${{ steps.changed.outputs.files }}
-
-      - name: Nothing to validate
-        if: steps.changed.outputs.files == ''
-        run: echo "No syllabus files changed."
+      - name: Validate every syllabus file
+        run: python3 scripts/validate.py

@@ -37,6 +37,14 @@ PYQ_PATH_RE = re.compile(
 
 PYQ_REQUIRED_FIELDS = ["course_code", "exam_year", "contributor"]
 
+# Programme documentation: universities/<university>/<branch>/<year>/overview.md
+# Describes a whole degree (structure, requirements, progression) rather than
+# one course, so it carries prose instead of course frontmatter. A separate
+# file type with its own rules, not an exemption from the course rules.
+OVERVIEW_PATH_RE = re.compile(
+    r"^universities/([a-z0-9-]+)/([a-z0-9-]+)/(\d{4})/overview\.md$"
+)
+
 # Accepted short codes: frontmatter may use the alias while the folder uses
 # the canonical slug. Extend this map when a new university has an
 # established short name.
@@ -48,6 +56,8 @@ UNIVERSITY_ALIASES = {
     "mulearn-foundation": {"mulearn"},
     "national-institute-of-technology-calicut": {"nitc"},
     "indian-institute-of-space-science-and-technology": {"iist"},
+    "university-of-oxford": {"oxford"},
+    "iisc-bengaluru": {"iisc"},
 }
 
 
@@ -106,9 +116,40 @@ def validate_pyq(path, rel, match):
     return errors, warnings
 
 
+def validate_overview(path):
+    """Programme documentation: prose, not course frontmatter."""
+    errors, warnings = [], []
+    try:
+        text = open(path, encoding="utf-8").read()
+    except Exception as exc:
+        return [f"unreadable: {exc}"], warnings
+
+    body = text.strip()
+    if body.startswith("---"):
+        errors.append(
+            "overview.md is prose, not a course file; drop the frontmatter "
+            "or move this content into a course file under <sNN>/"
+        )
+    if not body.startswith("#"):
+        errors.append("overview.md should open with a heading naming the programme")
+    if len(body) < 200:
+        warnings.append(
+            "overview looks thin; describe the degree structure and progression"
+        )
+    return errors, warnings
+
+
 def validate_file(path):
     errors, warnings = [], []
     rel = os.path.relpath(path).replace(os.sep, "/")
+
+    if OVERVIEW_PATH_RE.match(rel):
+        return validate_overview(path)
+    if os.path.basename(rel) == "overview.md":
+        errors.append(
+            "overview.md belongs at universities/<university>/<branch>/<year>/overview.md"
+        )
+        return errors, warnings
 
     pyq = PYQ_PATH_RE.match(rel)
     if pyq:
