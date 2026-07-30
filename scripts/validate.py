@@ -139,6 +139,67 @@ def validate_overview(path):
     return errors, warnings
 
 
+def _is_blank(line):
+    """Blank means no content, so spaces and tabs count as blank."""
+    return not line.strip()
+
+
+def _is_delimiter(line):
+    """A frontmatter delimiter is a line whose whole content is exactly ---.
+
+    Not ----, not --- followed by text, not --- with a trailing comment. A
+    Markdown horizontal rule of four or more dashes is not a delimiter either.
+    """
+    return line.strip() == "---"
+
+
+def shadowed_frontmatter(text):
+    """True when a second, complete frontmatter block follows the first.
+
+    A repair in this repository once prepended a generated block onto files
+    whose own frontmatter was merely missing its opening delimiter. The result
+    parses as valid (the parser stops at the first block) while the real
+    metadata sits below it, unread, and the contributor loses attribution.
+
+    The test is deliberately strict, because `---` is also a Markdown
+    horizontal rule and over a thousand files use one. A block qualifies only
+    if it carries every required field exactly once and nothing else, which
+    ordinary prose and rules do not.
+    """
+    lines = text.lstrip().split("\n")
+    if not lines or not _is_delimiter(lines[0]):
+        return False
+    first_end = next((i for i in range(1, len(lines)) if _is_delimiter(lines[i])), None)
+    if first_end is None:
+        return False
+
+    i = first_end + 1
+    while i < len(lines) and _is_blank(lines[i]):
+        i += 1                             # blank lines between blocks are allowed
+    start = i
+
+    # A fence opened above means the candidate sits inside a code example.
+    if "\n".join(lines[:start]).count("```") % 2:
+        return False
+
+    block = []
+    while i < len(lines) and not _is_delimiter(lines[i]):
+        block.append(lines[i])
+        i += 1
+    if i >= len(lines) or not block:
+        return False                       # never closed by a standalone ---
+
+    seen = []
+    for line in block:
+        if _is_blank(line):
+            return False                   # frontmatter blocks have no blank lines
+        m = re.match(r"^([a-z_]+):\s*\S", line)
+        if not m:
+            return False                   # prose, a fence, indentation, a bare word
+        seen.append(m.group(1))
+    return sorted(seen) == sorted(REQUIRED_FIELDS)
+
+
 def validate_file(path):
     errors, warnings = [], []
     rel = os.path.relpath(path).replace(os.sep, "/")
@@ -179,6 +240,13 @@ def validate_file(path):
     if err:
         errors.append(err)
         return errors, warnings
+
+    if shadowed_frontmatter(text):
+        errors.append(
+            "a second complete frontmatter block follows the first; the block "
+            "below is unread and its contributor loses attribution. Keep one "
+            "block, and check git history before discarding either"
+        )
 
     for field in REQUIRED_FIELDS:
         if field not in fm or not fm[field]:

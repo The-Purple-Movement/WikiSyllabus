@@ -16,5 +16,8 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      - name: Validator regression tests
+        run: python3 scripts/tests/test_shadowed_frontmatter.py
+
       - name: Validate every syllabus file
         run: python3 scripts/validate.py
