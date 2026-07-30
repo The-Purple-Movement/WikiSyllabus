@@ -21,6 +21,27 @@ Together, we can make a fully open, searchable, and markdown-based syllabus inde
 
 ---
 
+## 🗺️ Programme Overviews
+
+Some degrees need context that no single course file carries: how the years
+map to semesters, what the exit options are, which subjects are optional. That
+belongs in an overview.
+
+**Location:**
+
+```
+universities/<university>/<branch>/<scheme-year>/overview.md
+```
+
+**Rules:**
+
+1. Prose, not a course file. **No frontmatter** — the validator rejects it
+2. Open with a heading naming the programme, e.g. `# Oxford Computer Science (BA/MCompSci) - 2025`
+3. Describe structure and progression. Individual course content still goes in the `<sNN>/` files
+4. Optional. A branch is complete without one
+
+---
+
 ## 📄 Previous Year Question Papers (PYQs)
 
 Every PYQ you contribute becomes practice material inside [Beyond Syllabus](https://github.com/The-Purple-Movement/Beyond-Syllabus) for every student of that course.
