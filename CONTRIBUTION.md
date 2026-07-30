@@ -21,6 +21,32 @@ Together, we can make a fully open, searchable, and markdown-based syllabus inde
 
 ---
 
+## ✅ Check your work before opening a PR
+
+```bash
+python3 scripts/validate.py
+```
+
+It must print `0 error(s)`. CI runs the same command over the whole repo.
+
+Besides path and frontmatter rules, it checks things no single file can get
+wrong on its own:
+
+- **A course code must mean one course.** If the same code carries two
+  unrelated titles, one of the files is misfiled and the check says so. Codes
+  that differ only in wording ("Introduction to Algorithm" versus
+  "...Algorithms") are a warning, not an error, because universities really do
+  publish a shared course under slightly different names per branch.
+- **`course_code` must be a real code**, not `unknown` or `TBD`.
+- **`course_title` must not repeat the code.** Write
+  `course_title: "digital-lab"`, not `"pccsl308-digital-lab"`.
+
+If the validator flags a conflict you believe is correct, say so in the PR
+rather than working around it. The rule is deliberately conservative and the
+exceptions are tracked, not silenced.
+
+---
+
 ## 🗺️ Programme Overviews
 
 Some degrees need context that no single course file carries: how the years
