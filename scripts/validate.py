@@ -139,6 +139,20 @@ def validate_overview(path):
     return errors, warnings
 
 
+def _is_blank(line):
+    """Blank means no content, so spaces and tabs count as blank."""
+    return not line.strip()
+
+
+def _is_delimiter(line):
+    """A frontmatter delimiter is a line whose whole content is exactly ---.
+
+    Not ----, not --- followed by text, not --- with a trailing comment. A
+    Markdown horizontal rule of four or more dashes is not a delimiter either.
+    """
+    return line.strip() == "---"
+
+
 def shadowed_frontmatter(text):
     """True when a second, complete frontmatter block follows the first.
 
@@ -152,35 +166,36 @@ def shadowed_frontmatter(text):
     if it carries every required field exactly once and nothing else, which
     ordinary prose and rules do not.
     """
-    if not text.lstrip().startswith("---"):
+    lines = text.lstrip().split("\n")
+    if not lines or not _is_delimiter(lines[0]):
         return False
-    stripped = text.lstrip()
-    first_end = stripped.find("\n---", 3)
-    if first_end == -1:
+    first_end = next((i for i in range(1, len(lines)) if _is_delimiter(lines[i])), None)
+    if first_end is None:
         return False
 
-    after = stripped[first_end + 4:]
-    if after[:1] not in ("\n", ""):        # the delimiter must end its own line
-        return False
-    candidate_start = after.lstrip("\n")   # blank lines between blocks are allowed
-    second_end = candidate_start.find("\n---")
-    if second_end == -1:
-        return False
-    block = candidate_start[:second_end]
+    i = first_end + 1
+    while i < len(lines) and _is_blank(lines[i]):
+        i += 1                             # blank lines between blocks are allowed
+    start = i
 
-    # A fence opening before the candidate means we are inside a code example.
-    if (after[: len(after) - len(candidate_start)] + block).count("```") % 2:
+    # A fence opened above means the candidate sits inside a code example.
+    if "\n".join(lines[:start]).count("```") % 2:
         return False
-    if "```" in block:
-        return False
+
+    block = []
+    while i < len(lines) and not _is_delimiter(lines[i]):
+        block.append(lines[i])
+        i += 1
+    if i >= len(lines) or not block:
+        return False                       # never closed by a standalone ---
 
     seen = []
-    for line in block.split("\n"):
-        if not line.strip():
+    for line in block:
+        if _is_blank(line):
             return False                   # frontmatter blocks have no blank lines
         m = re.match(r"^([a-z_]+):\s*\S", line)
         if not m:
-            return False                   # prose, indentation or a bare word
+            return False                   # prose, a fence, indentation, a bare word
         seen.append(m.group(1))
     return sorted(seen) == sorted(REQUIRED_FIELDS)
 

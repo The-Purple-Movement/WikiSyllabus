@@ -96,6 +96,32 @@ def _():
     return f"---\n{GOOD_BLOCK}\n---\n\n\n\n{GOOD_BLOCK}\n---\n\n# Course\n"
 
 
+@case("a metadata-shaped body closed by ---- is not a delimiter", False)
+def _():
+    return f"---\n{GOOD_BLOCK}\n---\n\n{GOOD_BLOCK}\n----\n\n# Course\n"
+
+
+@case("a metadata-shaped body closed by ---text is not a delimiter", False)
+def _():
+    return f"---\n{GOOD_BLOCK}\n---\n\n{GOOD_BLOCK}\n---text\n\n# Course\n"
+
+
+@case("a metadata-shaped body closed by '--- # comment' is not a delimiter", False)
+def _():
+    return f"---\n{GOOD_BLOCK}\n---\n\n{GOOD_BLOCK}\n--- # closing\n\n# Course\n"
+
+
+@case("whitespace-only lines between the blocks are still blank", True)
+def _():
+    return f"---\n{GOOD_BLOCK}\n---\n   \n\t\n  \t  \n{GOOD_BLOCK}\n---\n\n# Course\n"
+
+
+@case("a fenced yaml example immediately after the frontmatter", False)
+def _():
+    return (f"---\n{GOOD_BLOCK}\n---\n\n```yaml\n{GOOD_BLOCK}\n---\n```\n\n"
+            "# Course\n\nBody.\n")
+
+
 def main():
     failed = 0
     for name, expected, text in CASES:
