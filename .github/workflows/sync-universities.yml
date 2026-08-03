@@ -1,5 +1,8 @@
 name: Sync Syllabus
 
+# Regenerates Beyond-Syllabus's syllabus.json from this repository and opens a
+# pull request against it. It never pushes to either default branch, so the
+# generated data goes through Beyond-Syllabus's own CI before anyone merges it.
 on:
   push:
     paths:
@@ -7,45 +10,141 @@ on:
     branches:
       - main
   schedule:
-    - cron: '0 */6 * * *' 
-      
+    # Off the hour: minute zero is the busiest slot on shared runners.
+    - cron: '17 */6 * * *'
   workflow_dispatch:
+
+# Only ever reads this repository. Everything written to Beyond-Syllabus is
+# authorised by the App installation token, not by this workflow's token.
+permissions:
+  contents: read
+
+concurrency:
+  group: sync-syllabus
+  cancel-in-progress: true
 
 jobs:
   sync:
     runs-on: ubuntu-latest
+    # Replaces the old shell fork-check, which called `exit 0` and so let every
+    # later step run anyway. Forks and non-default branches never reach the
+    # App token.
+    if: >-
+      github.repository == 'The-Purple-Movement/WikiSyllabus' &&
+      github.ref == 'refs/heads/main'
 
     steps:
-      - name: Check if the repository is a fork
-        run: |
-          if [[ "${GITHUB_REPOSITORY}" != "The-Purple-Movement/WikiSyllabus" ]]; then
-            echo "This workflow does not run on forks."
-            exit 0
-          fi
+      - name: Checkout WikiSyllabus at the triggering commit
+        uses: actions/checkout@v5
+        with:
+          # Pinned to the exact SHA so a rerun regenerates the same output,
+          # unlike the old `bun sync`, which cloned whatever main happened to be.
+          ref: ${{ github.sha }}
+          path: wikisyllabus
+          persist-credentials: false
 
-      - name: Checkout Beyond-Syllabus repository
+      - name: Generate GitHub App installation token
+        id: app-token
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ vars.SYLLABUS_SYNC_APP_CLIENT_ID }}
+          private-key: ${{ secrets.SYLLABUS_SYNC_APP_PRIVATE_KEY }}
+          owner: The-Purple-Movement
+          repositories: Beyond-Syllabus
+          permission-contents: write
+          permission-pull-requests: write
+
+      - name: Checkout Beyond-Syllabus
         uses: actions/checkout@v5
         with:
           repository: The-Purple-Movement/Beyond-Syllabus
           ref: main
-          token: ${{ secrets.GH_TOKEN }}
+          path: beyond-syllabus
+          token: ${{ steps.app-token.outputs.token }}
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          # Matches packageManager in Beyond-Syllabus/package.json. The old
+          # workflow ran `npm install` then `npm run patch`, and `patch` shells
+          # out to bun, so it could not have worked on a Node-only runner.
+          bun-version: 1.2.12
 
-      - name: Install dependencies
-        run: npm install
+      - name: Install Beyond-Syllabus dependencies
+        working-directory: beyond-syllabus
+        run: bun install --frozen-lockfile
 
-      - name: Run update script
-        run: npm run patch
-
-      - name: Set up Git config
+      - name: Stage syllabus data from the pinned WikiSyllabus checkout
         run: |
-          git config --global user.name "alvin-dennis"
-          git config --global user.email "alvindennis80@gmail.com"
+          rm -rf beyond-syllabus/universities
+          cp -R wikisyllabus/universities beyond-syllabus/universities
 
-      - name: Push Changes
+      - name: Generate syllabus.json
+        working-directory: beyond-syllabus
+        # `bun run generate` directly, not `bun run patch`: patch would re-clone
+        # WikiSyllabus at an unpinned main and discard the SHA checked out above.
+        run: bun run generate
+
+      - name: Remove the staged syllabus data
+        run: rm -rf beyond-syllabus/universities
+
+      - name: Assert only the generated file changed
+        working-directory: beyond-syllabus
         run: |
-          git add apps/server/src/routes/syllabus/syllabus.json
-          git commit -m "chore: Updated syllabus.json from WikiSyllabus" || echo "No changes to commit"
-          git push origin main
+          git status --porcelain > /tmp/sync-status.txt
+          cat /tmp/sync-status.txt
+          # Collect the lines that are NOT the one allowed change, rather than
+          # relying on grep's exit code: BSD and GNU grep disagree on what -q
+          # returns for an empty input.
+          unexpected=$(grep -v '^ M apps/server/src/routes/syllabus/syllabus\.json$' /tmp/sync-status.txt || true)
+          if [ -n "$unexpected" ]; then
+            echo "::error::Unexpected changes outside the generated file"
+            echo "$unexpected"
+            exit 1
+          fi
+
+      - name: Stop early if the generated data is unchanged
+        id: diff
+        working-directory: beyond-syllabus
+        run: |
+          if git diff --quiet -- apps/server/src/routes/syllabus/syllabus.json; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "Syllabus data is already up to date."
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Open or update the Beyond-Syllabus pull request
+        if: steps.diff.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@v8
+        with:
+          path: beyond-syllabus
+          # The App token, not GITHUB_TOKEN: a pull request opened with
+          # GITHUB_TOKEN does not fire `pull_request` workflows, so
+          # Beyond-Syllabus CI would never validate the generated data.
+          token: ${{ steps.app-token.outputs.token }}
+          base: main
+          branch: automation/sync-wikisyllabus
+          add-paths: apps/server/src/routes/syllabus/syllabus.json
+          commit-message: |
+            chore: regenerate syllabus.json from WikiSyllabus
+
+            Source: The-Purple-Movement/WikiSyllabus@${{ github.sha }}
+          committer: github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>
+          author: github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>
+          title: 'chore: sync syllabus.json from WikiSyllabus'
+          body: |
+            Regenerated `apps/server/src/routes/syllabus/syllabus.json` from WikiSyllabus.
+
+            **Source commit:** `The-Purple-Movement/WikiSyllabus@${{ github.sha }}`
+
+            Produced by `bun run generate` on Bun 1.2.12 against the
+            `universities/` tree at exactly that commit. Generation is
+            deterministic for a given source commit.
+
+            This branch is reused: each sync updates it in place rather than
+            opening a new pull request.
+
+            Opened automatically by `Sync Syllabus` in WikiSyllabus.
+          labels: automated, syllabus-sync
+          delete-branch: false
