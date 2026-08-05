@@ -19,5 +19,11 @@ jobs:
       - name: Validator regression tests
         run: python3 scripts/tests/test_shadowed_frontmatter.py
 
+      # The audit itself runs weekly in audit.yml, not here. Its tests run on
+      # every pull request so a change to scripts/audit.py is covered before
+      # the next scheduled run, which could be six days away.
+      - name: Audit regression tests
+        run: python3 scripts/tests/test_audit.py
+
       - name: Validate every syllabus file
         run: python3 scripts/validate.py
