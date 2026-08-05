@@ -1,44 +1,63 @@
 name: Generate Contributors List
 
+# Regenerates CONTRIBUTORS.md and opens a pull request with the result.
+# It no longer pushes to main. The "Protect main" ruleset requires every
+# change to the default branch to arrive through a pull request, which is why
+# every run since 2026-07-31 failed at the push step while generation itself
+# kept succeeding.
 on:
   push:
     branches: [main]
   workflow_dispatch:
 
+# The generation step only reads. Everything written to the repository is
+# authorised by the App installation token, not by this workflow's token.
 permissions:
-  contents: write
+  contents: read
+
+concurrency:
+  group: contributors
+  cancel-in-progress: true
 
 jobs:
   generate-contributors:
     runs-on: ubuntu-latest
-
-    if: ${{ github.repository == 'The-Purple-Movement/WikiSyllabus' }}
+    # Replaces the old shell fork-check, which ran as a step and so painted a
+    # red X on every fork before exiting. Forks never reach the App token.
+    if: >-
+      github.repository == 'The-Purple-Movement/WikiSyllabus' &&
+      github.ref == 'refs/heads/main'
 
     steps:
-      - name: Exit early if this is a fork (fallback safety)
-        run: |
-          if [ "${{ github.repository }}" != "The-Purple-Movement/WikiSyllabus" ]; then
-            echo "This is a fork — exiting workflow early."
-            exit 1
-          fi
-
-      # 1️⃣ Checkout repository
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
+          # Full history: the contributors API is queried over the network, but
+          # a shallow clone would still misreport local git authorship.
           fetch-depth: 0
+          persist-credentials: false
 
-      # 2️⃣ Set up Node.js
+      - name: Generate GitHub App installation token
+        id: app-token
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ vars.SYLLABUS_SYNC_APP_CLIENT_ID }}
+          private-key: ${{ secrets.SYLLABUS_SYNC_APP_PRIVATE_KEY }}
+          owner: The-Purple-Movement
+          repositories: WikiSyllabus
+          permission-contents: write
+          permission-pull-requests: write
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
-      # 3️⃣ Install required dependencies in-memory (no package.json)
       - name: Install dependencies
         run: npm install gray-matter node-fetch@2 glob
 
-      # 4️⃣ Run script inline (no .js file saved)
+      # Unchanged from the previous version of this workflow. Generation was
+      # never the problem: it succeeded on every failed run.
       - name: Generate CONTRIBUTORS.md
         run: |
           node - <<'EOF'
@@ -128,19 +147,64 @@ jobs:
           })();
           EOF
         env:
+          # Deliberately still the default token: generation only reads the
+          # public contributors list and public profiles, which this already
+          # allows. The App token is used for writing, and nothing else.
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
 
-      # 5️⃣ Commit & push only if CONTRIBUTORS.md changed
-      - name: Commit and push if CONTRIBUTORS.md changed
+      - name: Assert only CONTRIBUTORS.md changed
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-          git add CONTRIBUTORS.md
-          if git diff --cached --quiet; then
-            echo "✅ No changes in CONTRIBUTORS.md to commit."
-          else
-            git commit -m "chore: update CONTRIBUTORS.md [skip ci]"
-            git push
+          # -uno ignores untracked files: `npm install` above drops
+          # node_modules/, package.json and package-lock.json into the working
+          # tree, and none of those are ours to report on.
+          git status --porcelain -uno > /tmp/contrib-status.txt
+          cat /tmp/contrib-status.txt
+          # Collect the lines that are NOT the one allowed change rather than
+          # relying on grep's exit code: BSD and GNU grep disagree on what -q
+          # returns for empty input.
+          unexpected=$(grep -v '^ M CONTRIBUTORS\.md$' /tmp/contrib-status.txt || true)
+          if [ -n "$unexpected" ]; then
+            echo "::error::Unexpected changes outside CONTRIBUTORS.md"
+            echo "$unexpected"
+            exit 1
           fi
+
+      - name: Stop early if the contributors list is unchanged
+        id: diff
+        run: |
+          if git diff --quiet -- CONTRIBUTORS.md; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "CONTRIBUTORS.md is already up to date."
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Open or update the contributors pull request
+        if: steps.diff.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@v8
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          base: main
+          branch: automation/update-contributors
+          add-paths: CONTRIBUTORS.md
+          commit-message: |
+            chore: update CONTRIBUTORS.md
+
+            Regenerated from the repository contributors API and the
+            `contributors` frontmatter field.
+          committer: github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>
+          author: github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>
+          title: 'chore: update CONTRIBUTORS.md'
+          body: |
+            Regenerated `CONTRIBUTORS.md`.
+
+            Sources: the repository contributors API, plus the `contributors`
+            frontmatter field on syllabus files.
+
+            This branch is reused: each run updates it in place rather than
+            opening a new pull request.
+
+            Opened automatically by `Generate Contributors List`.
+          labels: automated, contributors
+          delete-branch: false
