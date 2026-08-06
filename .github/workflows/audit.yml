@@ -1,0 +1,52 @@
+name: Data Audit
+
+# Cross-file checks that validate.py cannot make, because every defect it
+# looks for is spread across two or more individually valid files. See #214.
+#
+# Deliberately separate from validate.yml and deliberately non-blocking: the
+# audit reports a backlog that predates it, and a contributor adding one
+# syllabus file should never be failed for a duplicate code somebody else
+# introduced in 2019. Promote the error-level checks into validate.yml once
+# that backlog is cleared.
+on:
+  schedule:
+    # Weekly, off the hour. Nothing here is urgent enough for a nightly run.
+    - cron: '23 4 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: data-audit
+  cancel-in-progress: true
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    if: github.repository == 'The-Purple-Movement/WikiSyllabus'
+
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - name: Audit regression tests
+        run: python3 scripts/tests/test_audit.py
+
+      - name: Audit the commons
+        # Non-blocking on purpose. The step summary is the deliverable; the
+        # exit code is recorded below so the run is still honest about it.
+        id: audit
+        continue-on-error: true
+        run: |
+          python3 scripts/audit.py --markdown >> "$GITHUB_STEP_SUMMARY"
+          python3 scripts/audit.py > /dev/null
+
+      - name: Record the outcome
+        run: |
+          if [ "${{ steps.audit.outcome }}" = "failure" ]; then
+            echo "::warning::The data audit found errors. See the job summary."
+          else
+            echo "The data audit found no errors."
+          fi
