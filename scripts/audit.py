@@ -194,7 +194,19 @@ def collect(root):
 
 
 def check_duplicate_codes(records):
-    """Two files in one semester claiming the same course code."""
+    """Two files in one semester claiming the same course code.
+
+    Both records survive into the generated data and both stay reachable:
+    Beyond-Syllabus keys subjects on the file name, not the code. So this
+    does not hide a course. What it does is show a student the same code
+    twice when they are choosing an elective, and make any lookup, deep link
+    or search by code ambiguous.
+
+    Worth checking the source before assuming the repository is at fault.
+    PECST753 is printed twice in KTU's own 2024 CSE document, once for Fuzzy
+    Systems and once for Game Theory and Mechanism Design, so at least one of
+    these findings is a faithful record of a defect upstream.
+    """
     groups = defaultdict(list)
     for r in records:
         if r["code"]:
@@ -206,8 +218,9 @@ def check_duplicate_codes(records):
             others = ", ".join(sorted(paths)[1:])
             out.append((ERROR, sorted(paths)[0],
                         f"course code '{code}' is claimed by {len(paths)} files "
-                        f"in this semester; the generated data will carry a "
-                        f"duplicate and hide a course. Also: {others}"))
+                        f"in this semester; the semester list shows the same "
+                        f"code twice and lookups by code are ambiguous. "
+                        f"Also: {others}"))
     return out
 
 
