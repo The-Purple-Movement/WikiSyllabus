@@ -35,18 +35,41 @@ jobs:
         run: python3 scripts/tests/test_audit.py
 
       - name: Audit the commons
-        # Non-blocking on purpose. The step summary is the deliverable; the
-        # exit code is recorded below so the run is still honest about it.
+        # Non-blocking on purpose; the exit code is recorded below so the run
+        # is still honest about what it found.
+        #
+        # One run, three destinations. The job summary is for whoever opens
+        # the run. The log keeps the report inside the run itself. The file
+        # becomes an artifact. The last two exist because the GitHub API does
+        # not expose job summaries: with only a summary, the findings of a
+        # scheduled run can be recovered solely by running the script again,
+        # against a tree that has moved on since.
         id: audit
         continue-on-error: true
         run: |
-          python3 scripts/audit.py --markdown >> "$GITHUB_STEP_SUMMARY"
-          python3 scripts/audit.py > /dev/null
+          set -o pipefail
+          status=0
+          python3 scripts/audit.py --markdown | tee audit-report.md || status=$?
+          cat audit-report.md >> "$GITHUB_STEP_SUMMARY"
+          exit $status
+
+      - name: Upload the report
+        # always(), not success(): the audit step reports failure whenever it
+        # finds errors, and that is exactly the run whose report is worth
+        # keeping.
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: data-audit-report
+          path: audit-report.md
+          retention-days: 90
+          if-no-files-found: error
 
       - name: Record the outcome
+        if: always()
         run: |
           if [ "${{ steps.audit.outcome }}" = "failure" ]; then
-            echo "::warning::The data audit found errors. See the job summary."
+            echo "::warning::Data audit found errors. See the job summary or the data-audit-report artifact."
           else
             echo "The data audit found no errors."
           fi
